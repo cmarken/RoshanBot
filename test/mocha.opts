@@ -1,0 +1,5 @@
+--timeout 1000
+--reporter spec
+--recursive
+--colors
+--require ./test/helpers/setup.js

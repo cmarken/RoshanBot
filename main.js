@@ -5,17 +5,17 @@ var processNewMatch = require('./lib/processNewMatch.js');
 var matchChecker = require('./lib/matchChecker.js');
 var Log = require('log');
 var fs = require('fs');
+var config = require('exp-config');
 
 var log = new Log('debug', fs.createWriteStream('debug.log'));
 
 var settings = {
-	token: '',
+	token: config.slackToken,
 	name: 'Roshan',
 	reportedMatchesDB: './reportedMatches.json',
 	registeredUsersDB: './registeredUsers.json',
-	reportChannel: 'dev-test',
-	shoutChannel: 'dev-test',
-	steamAPIKey: ''
+	reportChannel: config.reportChannel,
+	steamAPIKey: config.steamAPIKey
 };
 
 var dataModel;
