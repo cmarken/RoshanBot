@@ -7,16 +7,17 @@ process.env.TZ = "Europe/Stockholm";
 // real elasticsearch indices etc.
 // This file is required with ./test/mocha.opts
 process.env.NODE_ENV = "test";
+process.env.MUMBLE_URL = "localhost";
 
 // Setup common test libraries
 require("mocha-cakes-2");
 
-const chai = require("chai");
+//const chai = require("chai");
 
-chai.config.truncateThreshold = 0;
-chai.config.includeStack = true;
+//chai.config.truncateThreshold = 0;
+//chai.config.includeStack = true;
 
-chai.should();
+//chai.should();
 
 // Register useful chai plugins that you use
 //chai.use(require("chai-as-promised"));

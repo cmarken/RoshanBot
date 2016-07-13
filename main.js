@@ -1,12 +1,16 @@
 'use strict'
 
+process.env.MUMBLE_URL = "mumble.snakedesert.se";
+
 var init = require('./lib/init.js');
 var processNewMatch = require('./lib/processNewMatch.js');
 var matchChecker = require('./lib/matchChecker.js');
-var Log = require('log');
+var mumbleChecker = require('./lib/mumbleChecker.js');
+
 var fs = require('fs');
 var config = require('exp-config');
 
+var Log = require('log');
 var log = new Log('debug', fs.createWriteStream('debug.log'));
 
 var settings = {
@@ -33,9 +37,20 @@ init(settings)
 		dataModel.slackBot.postMessageToChannel(dataModel.reportChannel, matchString);
 	});
 
+	dataModel.eventEmitter.on('User connected to mumble.', (args) => {
+		log.debug("Printing that user " + args.userName + " connected to mumble.");
+		dataModel.slackBot.postMessageToChannel(dataModel.reportChannel, args.userName + " connected to mumble. Maybe it's game on!?");
+	});
+
 	matchChecker({
-		state: 'start',
-		interval: 1000*60*5,
+			state: 'start',
+			interval: 1000*60*5,
+		},
+		dataModel);
+
+	mumbleChecker({
+			mumbleOptions: {},
+			mumbleURL: config.mumbleURL,
 		},
 		dataModel);
 });
