@@ -1,0 +1,11 @@
+{
+	"slackToken": "xoxb-17557239537-GW43gRiUUlj5HCDSZsszL8Vn",
+  	"reportChannel": "dev-test",
+ 	"steamAPIKey": "1234567890",
+	"mumbleURL": "localhost",
+ 	"botName": "RoshanTEST",
+	"reportedMatchesDB": "test/mocks/reportedMatches.json",
+	"registeredUsersDB": "test/mocks/registeredUsers.json",
+	"log": "file",
+	"logLevel": "debug"
+}
