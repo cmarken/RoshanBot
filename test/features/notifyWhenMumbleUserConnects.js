@@ -2,77 +2,93 @@
 
 require('mocha-cakes-2');
 var expect = require('chai').expect;
+var nock = require('nock');
 var fs = require('fs');
 var config = require('exp-config');
-var EventEmitter = require('events').EventEmitter;
+const logger = require("../../lib/logger.js");
 
-var SlackBot = require('slackbots');
 var mumble = require('mumble');
 
-//var init = require('../../lib/init.js');
-var mumbleChecker = require('../../lib/mumbleChecker.js');
+var mumbleBot = require('../../lib/mumbleBot.js');
+var init = require('../../lib/init.js');
+var slackBot = require('../../lib/slackBot.js');
 
-Feature("As a mumble and slack user I want to be notified on slack when someone connects to mumble so that I know that a game is going to start soon", () => {		
-	var slackBot;
-
-	var dataModel = {
-		eventEmitter: new EventEmitter()
-	};
-
-	Scenario("Someone connects to the mumble server and then Roshan posts in slack who connected.", () => {
-		var mumbleOptions;
-		var slackOptions;
+Feature("Notify on Slack when someone connects to Mumble", () => {		
+	Scenario("1 user (Lina) connects to mumble", () => {
+		var dataModel = null;
+ 		let nockHeroesCTX, nockModsCTX;
 
 		before ( () => {
-			mumbleOptions = {};
+			nockHeroesCTX = nock('https://raw.githubusercontent.com')
+			.get('/kronusme/dota2-api/master/data/heroes.json')
+			.reply(200, fs.readFileSync('test/mocks/heroes.json', 'utf8'));    
 
-			slackOptions = {
-				token: config.slackToken,
-    			name: 'Roshan'
+			 nockModsCTX = nock('https://raw.githubusercontent.com')
+			.get('/kronusme/dota2-api/master/data/mods.json')
+			.reply(200, fs.readFileSync('test/mocks/mods.json', 'utf8'));
+
+			return init().then(function (res) { 
+				dataModel = res;
+			}).catch(function (error) {
+				logger.error(error);
+			});
+		});
+
+		after ( () => {
+			nockModsCTX.done();
+			nockHeroesCTX.done();
+		});
+	
+		Given("The slackBot is open.", (done) => {
+			var fn = () => {
+				dataModel.slackBot = slackBot.slackBot;
+				expect(dataModel.slackBot).to.not.be.null;
+				dataModel.eventEmitter.removeListener('slack-open', fn);
+				done();
 			};
+
+			dataModel.eventEmitter.on('slack-open', fn);
+
+			slackBot.init(dataModel);
 		});
 
-		Given("The connection to mumble has been established.", (done) => {
-			mumbleChecker({
-				mumbleOptions: {},
-				mumbleURL: config.mumbleURL
-			},
-			dataModel
-			);
+		And("The mumbleBot is ready.", (done) => {
+			var fn = () => {
+				dataModel.mumbleClient = mumbleBot.mumbleClient;
+				expect(dataModel.mumbleClient).to.not.be.null;
+				dataModel.eventEmitter.removeListener('mumble-ready', fn);
+				done();
+			};
 
-			dataModel.eventEmitter.on('Connection to mumble initialized.', () => {
+			dataModel.eventEmitter.on('mumble-ready', fn);
+
+			mumbleBot.init(dataModel);
+		});
+
+		When("The bot notices Lina logs in.", (done) => {
+			dataModel.eventEmitter.on('mumble-user-connect', (args) => {
 				done();
 			});
-		});
 
-		And("The connection to slack has been established.", (done) => {
-			slackBot = new SlackBot(slackOptions);
+			mumble.connect(config.mumbleURL, {}, (error, testClient) => {
+				if (error) { throw new Error(error); }
+	    	
+	    	testClient.on('ready', () => {
+	    	});
 
-			slackBot.on('open', () => {
-				done();
-			});
-		});
-
-		When("The bot notifies someone logs into mumble", (done) => {
-			mumble.connect(process.env.MUMBLE_URL, mumbleOptions, (error, connection) => {
-				if (error) { throw new Error(error);}
-   			
-   				connection.authenticate('Lina');
-
-       			dataModel.eventEmitter.on('User connected to mumble.', (args) => {
- 					slackBot.postMessageToChannel(config.reportChannel, args.userName + " connected to mumble. Maybe it's game on!?");
- 					done();
-    			});
+	    	testClient.authenticate('Lina');
 			});
 		});
 
 		Then("A message is posted on slack.", (done) => {
-			slackBot.on('message', (message) => {
-				if (message.type === "message") {
-					expect(message.text).to.be.equal("Lina connected to mumble. Maybe it's game on!?");
+			var fn = (message) => {
+				if (message.type === "message" && message.text === "Lina connected to mumble. Maybe it's game on!?") {
+					dataModel.slackBot.removeListener('message', fn);
 					done();
 				}
-			});
+			};
+
+			dataModel.slackBot.on('message', fn);
 		});
 	});
 });
